@@ -11,13 +11,13 @@ class Config:
     LOGS_PATH = "logs/"
     
     # Model Parameters
-    BACKBONE = "resnet50"  # Options: resnet18, resnet50, efficientnet_b0
+    BACKBONE = "resnet18"  # Options: resnet18, resnet50, efficientnet_b0 (using resnet18 - lighter, faster, DISK SPACE CONSTRAINED)
     IMG_SIZE = 224
     PRETRAINED = True
     USE_LSTM = True  # Use LSTM for temporal modeling (as per problem statement)
     
     # Training Parameters
-    BATCH_SIZE = 16
+    BATCH_SIZE = 8  # Reduced for memory efficiency
     NUM_EPOCHS = 20
     LEARNING_RATE = 0.001
     WEIGHT_DECAY = 1e-4

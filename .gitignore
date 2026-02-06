@@ -1,1 +1,58 @@
+# Dataset and raw data (CRITICAL: Don't push to GitHub)
 data/
+*.mp4
+*.avi
+*.mov
+*.webm
+*.MP4
+*.AVI
+*.MOV
+*.WEBM
+
+# Model checkpoints and weights (CRITICAL: Don't push to GitHub)
+models/
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+*.pickle
+checkpoints/
+
+# Logs and tensorboard
+logs/
+runs/
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
