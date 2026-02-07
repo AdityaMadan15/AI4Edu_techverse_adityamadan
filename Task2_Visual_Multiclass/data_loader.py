@@ -1,4 +1,5 @@
-"""Data loader for video frames - 4 Class Classification"""
+"""Data loader for video frames - 4 Class Classification
+Based on Task 1's proven data loader"""
 import os
 import cv2
 import torch
@@ -55,10 +56,14 @@ class VideoDataset(Dataset):
         print(f"DATASET LOADED - 4 CLASS")
         print(f"{'='*60}")
         print(f"Total videos: {len(self.video_paths)}")
-        print(f"  Class 0 (Distracted): {label_counts[0]} videos")
-        print(f"  Class 1 (Disengaged): {label_counts[1]} videos")
-        print(f"  Class 2 (Nominally Engaged): {label_counts[2]} videos")
-        print(f"  Class 3 (Highly Engaged): {label_counts[3]} videos")
+        if len(label_counts) > 0:
+            print(f"  Class 0 (Distracted): {label_counts[0]} videos")
+        if len(label_counts) > 1:
+            print(f"  Class 1 (Disengaged): {label_counts[1]} videos")
+        if len(label_counts) > 2:
+            print(f"  Class 2 (Nominally Engaged): {label_counts[2]} videos")
+        if len(label_counts) > 3:
+            print(f"  Class 3 (Highly Engaged): {label_counts[3]} videos")
         print(f"FPS: {self.fps} | Max frames: {self.max_frames}")
         print(f"{'='*60}\n")
     
@@ -72,139 +77,127 @@ class VideoDataset(Dataset):
                 print(f"⚠️  Warning: Could not open video: {os.path.basename(video_path)}")
                 return None
             
-            # Quick test read
+            # Quick test read to check if video is readable
             ret, test_frame = cap.read()
             if not ret or test_frame is None:
                 print(f"⚠️  Warning: Cannot read frames from: {os.path.basename(video_path)}")
                 cap.release()
                 return None
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            
-            original_fps = cap.get(cv2.CAP_PROP_FPS)
-            frame_step = max(1, int(original_fps / self.fps))
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Reset to beginning
             
             frames = []
-            frame_idx = 0
+            original_fps = cap.get(cv2.CAP_PROP_FPS)
+            if original_fps == 0:
+                original_fps = 30
             
-            while True:
+            frame_interval = max(1, int(original_fps / self.fps))
+            frame_count = 0
+            
+            while len(frames) < self.max_frames:
                 ret, frame = cap.read()
                 if not ret:
                     break
                 
-                if frame_idx % frame_step == 0:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame_resized = cv2.resize(frame_rgb, (self.img_size, self.img_size))
-                    frames.append(frame_resized)
-                    
-                    if len(frames) >= self.max_frames:
-                        break
+                if frame_count % frame_interval == 0:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    frame = cv2.resize(frame, (self.img_size, self.img_size))
+                    frames.append(frame)
                 
-                frame_idx += 1
+                frame_count += 1
             
             cap.release()
             
-            if len(frames) < self.min_frames:
-                print(f"⚠️  Warning: Only {len(frames)} frames in {os.path.basename(video_path)}, padding...")
-                while len(frames) < self.min_frames:
-                    frames.append(frames[-1] if frames else np.zeros((self.img_size, self.img_size, 3), dtype=np.uint8))
+            # Pad or truncate to exactly max_frames
+            if len(frames) < self.max_frames:
+                # Pad with last frame or black frames
+                if len(frames) > 0:
+                    last_frame = frames[-1]
+                    while len(frames) < self.max_frames:
+                        frames.append(last_frame.copy())
+                else:
+                    return None
+            elif len(frames) > self.max_frames:
+                frames = frames[:self.max_frames]
             
-            return frames
-        
+            return frames if len(frames) >= self.min_frames else None
+            
         except Exception as e:
-            print(f"❌ Error extracting frames from {os.path.basename(video_path)}: {str(e)}")
+            print(f"Error extracting {video_path}: {e}")
             return None
     
     def __getitem__(self, idx):
         video_path = self.video_paths[idx]
         label = self.labels[idx]
         
+        # Extract frames (no verbose output for speed)
+        video_name = os.path.basename(video_path)
+        
         frames = self.extract_frames(video_path)
-        if frames is None:
+        
+        if frames is None or len(frames) != self.max_frames:
+            # Create dummy frames with exact max_frames length
             frames = [np.zeros((self.img_size, self.img_size, 3), dtype=np.uint8)] * self.max_frames
         
-        # Ensure exactly max_frames by padding or truncating
-        if len(frames) < self.max_frames:
-            # Pad with last frame
-            while len(frames) < self.max_frames:
-                frames.append(frames[-1] if frames else np.zeros((self.img_size, self.img_size, 3), dtype=np.uint8))
-        elif len(frames) > self.max_frames:
-            # Truncate
-            frames = frames[:self.max_frames]
+        # Apply transforms
+        transformed_frames = []
+        for frame in frames:
+            if self.transform:
+                frame = Image.fromarray(frame)
+                frame = self.transform(frame)
+            else:
+                frame = torch.from_numpy(frame).permute(2, 0, 1).float() / 255.0
+            transformed_frames.append(frame)
         
-        if self.transform:
-            frames = [self.transform(Image.fromarray(frame)) for frame in frames]
-        else:
-            frames = [torch.from_numpy(frame).permute(2, 0, 1).float() / 255.0 for frame in frames]
+        # Stack frames
+        video_tensor = torch.stack(transformed_frames)
         
-        video_tensor = torch.stack(frames)
-        
-        return video_tensor, label, os.path.basename(video_path)
+        return video_tensor, label, video_path
+
+
+def get_transforms(mode='train', img_size=224):
+    if mode == 'train':
+        return transforms.Compose([
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
+            transforms.RandomGrayscale(p=0.1),
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.RandomErasing(p=0.2)
+        ])
+    else:
+        return transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
 
 def get_dataloaders(config):
-    """Create train and validation dataloaders"""
-    transform_train = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(10),
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    transform_val = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    # Create dataset once to get size and indices
-    temp_dataset = VideoDataset(
+    dataset = VideoDataset(
         data_path=config.DATA_PATH,
         label_map=config.LABEL_MAP,
-        transform=None,
+        transform=get_transforms('train', config.IMG_SIZE),
         fps=config.FPS,
         max_frames=config.MAX_FRAMES,
         min_frames=config.MIN_FRAMES,
         img_size=config.IMG_SIZE
     )
     
-    dataset_size = len(temp_dataset)
-    indices = list(range(dataset_size))
-    split = int(np.floor(config.VAL_SPLIT * dataset_size))
+    # Split train/val
+    dataset_size = len(dataset)
+    val_size = int(dataset_size * config.VAL_SPLIT)
+    train_size = dataset_size - val_size
     
-    np.random.seed(config.SEED)
-    np.random.shuffle(indices)
-    train_indices, val_indices = indices[split:], indices[:split]
-    
-    # Create separate datasets with different transforms
-    train_data = VideoDataset(
-        data_path=config.DATA_PATH,
-        label_map=config.LABEL_MAP,
-        transform=transform_train,
-        fps=config.FPS,
-        max_frames=config.MAX_FRAMES,
-        min_frames=config.MIN_FRAMES,
-        img_size=config.IMG_SIZE
-    )
-    
-    val_data = VideoDataset(
-        data_path=config.DATA_PATH,
-        label_map=config.LABEL_MAP,
-        transform=transform_val,
-        fps=config.FPS,
-        max_frames=config.MAX_FRAMES,
-        min_frames=config.MIN_FRAMES,
-        img_size=config.IMG_SIZE
-    )
-    
-    train_dataset = torch.utils.data.Subset(train_data, train_indices)
-    val_dataset = torch.utils.data.Subset(val_data, val_indices)
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
     
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
         shuffle=True,
         num_workers=config.NUM_WORKERS,
-        pin_memory=True
+        pin_memory=False,
+        drop_last=True  # Avoid single-sample batches that break BatchNorm
     )
     
     val_loader = DataLoader(
@@ -212,10 +205,8 @@ def get_dataloaders(config):
         batch_size=config.BATCH_SIZE,
         shuffle=False,
         num_workers=config.NUM_WORKERS,
-        pin_memory=True
+        pin_memory=False,
+        drop_last=False  # Keep all validation samples
     )
-    
-    print(f"Training samples: {len(train_dataset)}")
-    print(f"Validation samples: {len(val_dataset)}\n")
     
     return train_loader, val_loader

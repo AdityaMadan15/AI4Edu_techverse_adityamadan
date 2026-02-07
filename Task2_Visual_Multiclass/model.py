@@ -1,4 +1,5 @@
-"""Model: MobileNetV2 + Temporal Attention for 4-Class Classification"""
+"""Model: MobileNetV2 + Temporal Attention for 4-Class Classification
+Based on Task 1's proven architecture (87.50% accuracy)"""
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -24,7 +25,7 @@ class TemporalAttention(nn.Module):
 
 class VisualMultiClassifier(nn.Module):
     """Video Classifier for 4-Class Student Engagement"""
-    def __init__(self, num_classes=4, hidden_size=256, lstm_layers=2, dropout=0.6):
+    def __init__(self, num_classes=2, hidden_size=256, lstm_layers=2, dropout=0.5):
         super(VisualMultiClassifier, self).__init__()
         
         # MobileNetV2 backbone (efficient and lightweight)
@@ -41,17 +42,17 @@ class VisualMultiClassifier(nn.Module):
         
         self.backbone = mobilenet
         
-        # Temporal attention
+        # Temporal attention instead of LSTM (simpler)
         self.temporal_attention = TemporalAttention(self.feature_dim)
         
-        # Classification head with LayerNorm
+        # Classification head with LayerNorm (more stable than BatchNorm)
         self.classifier = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(self.feature_dim, hidden_size),
+            nn.Linear(self.feature_dim, 128),
             nn.ReLU(),
-            nn.LayerNorm(hidden_size),
+            nn.LayerNorm(128),  # LayerNorm instead of BatchNorm1d - no batch size issues
             nn.Dropout(dropout),
-            nn.Linear(hidden_size, num_classes)
+            nn.Linear(128, num_classes)
         )
     
     def forward(self, x):
