@@ -23,7 +23,7 @@ class VideoPredictor:
             dropout=config.DROPOUT
         ).to(self.device)
         
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()
         
@@ -118,7 +118,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Predict on a video')
     parser.add_argument('--video_path', type=str, required=True, help='Path to video file')
-    parser.add_argument('--checkpoint', type=str, default='./checkpoints/best_model.pth', help='Model checkpoint')
+    parser.add_argument('--checkpoint', type=str, default='./best_model.pth', help='Model checkpoint')
     parser.add_argument('--simple', action='store_true', help='Output only class number (0 or 1) for automated testing')
     args = parser.parse_args()
     main(args)

@@ -89,7 +89,7 @@ tensorboard --logdir=logs/
 
 ## Inference
 
-### Predict on a single video
+### Option 1: Single Video Prediction
 ```bash
 # Detailed output (shows confidence, probabilities)
 python predict.py --video_path /path/to/video.mp4
@@ -97,6 +97,26 @@ python predict.py --video_path /path/to/video.mp4
 # Simple output (only class number: 0 or 1) - FOR JUDGES
 python predict.py --video_path /path/to/video.mp4 --simple
 ```
+
+### Option 2: Detailed Inference Demo
+```bash
+# Shows full detailed output with probabilities
+python inference_demo.py /path/to/video.mp4
+```
+
+### Option 3: Batch Processing (Multiple Videos)
+```bash
+# Process all videos in a folder
+python batch_inference.py "../videos for testing/"
+```
+
+### Quick Test for Judges
+```bash
+# Run inference on all test videos at once
+./run_inference_test.sh
+```
+
+**See INFERENCE_RESULTS.md for detailed inference examples and results.**
 
 ### Use custom checkpoint
 ```bash

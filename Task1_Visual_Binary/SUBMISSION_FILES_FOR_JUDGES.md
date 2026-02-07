@@ -11,13 +11,22 @@
 
 ### 1. 🎯 **Trained Model** (Most Important!)
 ```
-Task1_Visual_Binary/checkpoints/best_model.pth (29 MB)
+Task1_Visual_Binary/best_model.pth (29 MB)
 ```
 - This is your trained neural network
 - Contains model weights at best validation accuracy (87.50%)
 - Judges will load this to test on their videos
 
-### 2. 📝 **Training Log** (Shows Progress)
+### 2. 🧪 **Inference Results** (Proof of Accuracy!) ⭐ NEW
+```
+Task1_Visual_Binary/INFERENCE_RESULTS.md
+```
+- Real inference results on 5 new test videos
+- Shows model predictions, confidence scores, and accuracy
+- Demonstrates model works on unseen data
+- Includes instructions for judges to reproduce results
+
+### 3. 📝 **Training Log** (Shows Progress)
 ```
 Task1_Visual_Binary/training.log (49 KB)
 ```
@@ -26,7 +35,7 @@ Task1_Visual_Binary/training.log (49 KB)
 - Validation accuracy: Started 62.5% → Reached 87.50%
 - Contains all metrics, loss values, F1 scores
 
-### 3. 📊 **Confusion Matrices** (Visual Results)
+### 4. 📊 **Confusion Matrices** (Visual Results)
 ```
 Task1_Visual_Binary/logs/confusion_matrix_epoch5.png
 ```
@@ -34,7 +43,37 @@ Task1_Visual_Binary/logs/confusion_matrix_epoch5.png
 - Epoch 5 was the best (87.50% accuracy)
 - Visual proof of performance
 
-### 4. 🔮 **Prediction Script** (How to Use Model)
+### 5. 🔮 **Prediction Scripts** (How to Use Model)
+
+**Usage:**
+```bash
+python batch_inference.py "videos for testing/"
+```
+
+**Output**: `0` or `1` (single number)
+- 0 = Low Attention (distracted/disengaged)
+- 1 = High Attention (nominally/highly engaged)
+
+### 6. 📹 **Test Videos** (For Verification)
+```
+videos for testing/ (in root directory)
+```
+- 5 new videos for inference testing
+- Shows model works on unseen data
+- Results documented in INFERENCE_RESULTS.md
+- Accessible by all tasks
+
+### 7
+Task1_Visual_Binary/inference_demo.py
+```
+**Usage:**
+```bash
+python inference_demo.py <video.mp4>
+```
+
+#### Batch Inference (Multiple Videos):
+```
+Task1_Visual_Binary/batch_inference.py
 ```
 Task1_Visual_Binary/predict.py
 ```

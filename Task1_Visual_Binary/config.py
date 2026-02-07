@@ -4,7 +4,7 @@ import torch
 class Config:
     # Paths
     DATA_PATH = "../data/train/"
-    MODEL_SAVE_PATH = "./checkpoints/"
+    MODEL_SAVE_PATH = "./"
     LOGS_PATH = "./logs/"
     
     # Model Architecture
